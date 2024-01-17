@@ -9,8 +9,6 @@
 #include <string.h>
 #include <libgen.h>
 
-#define DIR_TYPE 4
-
 int get_mode(const char *file)
 {
     struct stat sb;
