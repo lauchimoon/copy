@@ -11,10 +11,6 @@
 
 #define DIR_TYPE 4
 
-#ifndef strdup
-    char *strdup(const char *s);
-#endif
-
 int get_mode(const char *file)
 {
     struct stat sb;
