@@ -127,19 +127,19 @@ int main(int argc, char **argv)
     const char *src = argv[1];
     const char *dst = argv[2];
 
-    int ret1 = get_mode(src);
-    if (ret1 < 0) {
+    int src_ret = get_mode(src);
+    if (src_ret < 0) {
         printf("copy: operand '%s' does not exist.\n", src);
         return 1;
     }
-    int ret2 = get_mode(dst);
+    int dst_ret = get_mode(dst);
 
     // Operand dst does not exist so create it
-    if (ret2 < 0) {
-        if (S_ISREG(ret2)) {
+    if (dst_ret < 0) {
+        if (S_ISREG(src_ret)) {
             FILE *tmp = fopen(dst, "w");
             fclose(tmp);
-        } else if (S_ISDIR(ret2)) {
+        } else if (S_ISDIR(src_ret)) {
             int ret = mkdir(dst, 0755);
             if (ret < 0) {
                 printf("copy: failed to make directory '%s'\n", dst);
@@ -148,13 +148,16 @@ int main(int argc, char **argv)
         }
     }
 
+    // Update the file mode, as it now exists
+    dst_ret = get_mode(dst);
+
     // What if ret1 and ret2 have different modes?
-    if (ret1 != ret2) {
+    if (src_ret != dst_ret) {
         printf("copy: '%s' and '%s' have different types.\n", src, dst);
         return 1;
     }
 
-    if (S_ISREG(ret1)) {
+    if (S_ISREG(src_ret)) {
         // If src is a file, copy file contents to dst file
         int ret = copy_file_contents(src, dst);
         if (ret == 1) {
@@ -165,7 +168,7 @@ int main(int argc, char **argv)
         }
 
         return ret;
-    } else if (S_ISDIR(ret1)) {
+    } else if (S_ISDIR(src_ret)) {
         // If src is a directory, copy all files into dst dir recursively
         int ret = copy_dirs(src, dst);
         if (ret == 1) {
