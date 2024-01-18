@@ -42,7 +42,7 @@ int get_mode(const char *file)
 }
 
 // https://unix.stackexchange.com/a/74843
-void mkdir_recursive(const char *path)
+void mkdir_recursive(const char *path, int mode)
 {
     char *subpath, *fullpath;
 
@@ -50,10 +50,10 @@ void mkdir_recursive(const char *path)
     fullpath = strdup(path);
     subpath = dirname(fullpath);
     if (strlen(subpath) > 1) {
-        mkdir_recursive(subpath);
+        mkdir_recursive(subpath, mode);
     }
 
-    mkdir(path, 0755);
+    mkdir(path, mode);
     free(fullpath);
 }
 
@@ -110,7 +110,7 @@ int copy_dirs(const char *root, const char *dst)
         if (!S_ISDIR(mode)) {
             copy_file_contents(path_root, path_dst);
         } else {
-            mkdir_recursive(path_dst);
+            mkdir_recursive(path_dst, mode);
             copy_dirs(path_root, path_dst);
         }
     }
@@ -143,7 +143,8 @@ int main(int argc, char **argv)
             FILE *tmp = fopen(dst, "w");
             fclose(tmp);
         } else if (S_ISDIR(src_mode)) {
-            int ret = mkdir(dst, src_mode);
+            int ret = mkdir(dst, 0);
+            chmod(dst, src_mode);
             if (ret < 0) {
                 printf("copy: failed to make directory '%s'\n", dst);
                 return 1;
@@ -153,7 +154,6 @@ int main(int argc, char **argv)
 
     // Update the file mode, as it now exists
     dst_mode = get_mode(dst);
-    chmod(dst, dst_mode);
 
     // What if src_mode and dst_mode have different modes?
     if (src_mode != dst_mode) {
