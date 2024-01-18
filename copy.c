@@ -70,9 +70,12 @@ int copy_file_contents(const char *src, const char *dst)
     }
     FILE *f2 = fopen(dst, "w");
 
-    while ((c = fgetc(f1)) != EOF) {
+    while (fread(&c, sizeof(char), 1, f1) > 0) {
         fprintf(f2, "%c", c);
     }
+
+    int mode_f1 = get_mode(src);
+    chmod(dst, mode_f1);
 
     fclose(f2);
     fclose(f1);
@@ -104,9 +107,9 @@ int copy_dirs(const char *root, const char *dst)
         snprintf(path_dst, sizeof(path_dst), "%s/%s", dst, dir->d_name);
 
         int mode = get_mode(path_root);
-        if (S_ISREG(mode)) {
+        if (!S_ISDIR(mode)) {
             copy_file_contents(path_root, path_dst);
-        } else if (S_ISDIR(mode)) {
+        } else {
             mkdir_recursive(path_dst);
             copy_dirs(path_root, path_dst);
         }
@@ -127,20 +130,20 @@ int main(int argc, char **argv)
     const char *src = argv[1];
     const char *dst = argv[2];
 
-    int src_ret = get_mode(src);
-    if (src_ret < 0) {
+    int src_mode = get_mode(src);
+    if (src_mode < 0) {
         printf("copy: operand '%s' does not exist.\n", src);
         return 1;
     }
-    int dst_ret = get_mode(dst);
+    int dst_mode = get_mode(dst);
 
     // Operand dst does not exist so create it
-    if (dst_ret < 0) {
-        if (S_ISREG(src_ret)) {
+    if (dst_mode < 0) {
+        if (S_ISREG(src_mode)) {
             FILE *tmp = fopen(dst, "w");
             fclose(tmp);
-        } else if (S_ISDIR(src_ret)) {
-            int ret = mkdir(dst, 0755);
+        } else if (S_ISDIR(src_mode)) {
+            int ret = mkdir(dst, src_mode);
             if (ret < 0) {
                 printf("copy: failed to make directory '%s'\n", dst);
                 return 1;
@@ -149,15 +152,16 @@ int main(int argc, char **argv)
     }
 
     // Update the file mode, as it now exists
-    dst_ret = get_mode(dst);
+    dst_mode = get_mode(dst);
+    chmod(dst, dst_mode);
 
-    // What if ret1 and ret2 have different modes?
-    if (src_ret != dst_ret) {
+    // What if src_mode and dst_mode have different modes?
+    if (src_mode != dst_mode) {
         printf("copy: '%s' and '%s' have different types.\n", src, dst);
         return 1;
     }
 
-    if (S_ISREG(src_ret)) {
+    if (S_ISREG(src_mode)) {
         // If src is a file, copy file contents to dst file
         int ret = copy_file_contents(src, dst);
         if (ret == 1) {
@@ -168,7 +172,7 @@ int main(int argc, char **argv)
         }
 
         return ret;
-    } else if (S_ISDIR(src_ret)) {
+    } else if (S_ISDIR(src_mode)) {
         // If src is a directory, copy all files into dst dir recursively
         int ret = copy_dirs(src, dst);
         if (ret == 1) {
