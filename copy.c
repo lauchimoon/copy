@@ -53,7 +53,8 @@ void mkdir_recursive(const char *path, int mode)
         mkdir_recursive(subpath, mode);
     }
 
-    mkdir(path, mode);
+    mkdir(path, 0);
+    chmod(path, mode);
     free(fullpath);
 }
 
